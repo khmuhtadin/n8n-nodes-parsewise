@@ -1,0 +1,438 @@
+{
+  "name": "Extract invoice fields from Gmail with Parsewise, Google Sheets and Slack",
+  "nodes": [
+    {
+      "id": "n001-0000-4000-8000-000000000000",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "content": "## Extract invoice fields from Gmail with Parsewise, Google Sheets and Slack\n\nFinance and ops teams still copy invoice numbers and totals out of PDFs by hand. This workflow watches Gmail for emails with attachments, sends the file to Parsewise, waits for the extraction and writes the invoice number, total and due date to Google Sheets. Every value comes back with a citation to the source document.\n\n### How it works\n1. Gmail Trigger picks up new emails with attachments and downloads them.\n2. Parsewise extracts the fields defined in the JSON schema.\n3. The workflow waits, then checks the project status until extraction is done.\n4. Results are read and mapped to columns.\n5. A row is added to Google Sheets and Slack gets a short note.\n\n### Setup steps\n- [ ] Install the community node **n8n-nodes-parsewise** (Settings > Community nodes)\n- [ ] Add a Parsewise API key (parsewise.ai) as a credential\n- [ ] Connect Gmail and set the search filter (for example label:invoices)\n- [ ] Create a sheet **Invoices** (received_at, from, invoice_number, total_due, due_date, project_id)\n- [ ] Connect Slack and pick your channel\n\n### Customization\nAdd fields to the schema (vendor, VAT, PO number) and map them in **Map fields**.",
+        "width": 560,
+        "height": 720
+      }
+    },
+    {
+      "id": "n002-0000-4000-8000-000000000000",
+      "name": "1. Receive the invoice",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        0
+      ],
+      "parameters": {
+        "content": "## 1. Receive the invoice\n\nGmail Trigger downloads new emails with attachments and sends the first file to Parsewise for extraction.",
+        "width": 580,
+        "height": 370,
+        "color": 7
+      }
+    },
+    {
+      "id": "n005-0000-4000-8000-000000000000",
+      "name": "2. Wait for Parsewise",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        0
+      ],
+      "parameters": {
+        "content": "## 2. Wait for Parsewise\n\nWaits a minute, checks the project status and loops back until the extraction has finished.",
+        "width": 840,
+        "height": 370,
+        "color": 7
+      }
+    },
+    {
+      "id": "n009-0000-4000-8000-000000000000",
+      "name": "3. Save and notify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2120,
+        0
+      ],
+      "parameters": {
+        "content": "## 3. Save and notify\n\nReads the extracted values, maps them to columns, adds a row to the sheet and posts to Slack.",
+        "width": 1100,
+        "height": 370,
+        "color": 7
+      }
+    },
+    {
+      "id": "n003-0000-4000-8000-000000000000",
+      "name": "New invoice email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "has:attachment label:invoices"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      },
+      "position": [
+        680,
+        180
+      ]
+    },
+    {
+      "id": "n004-0000-4000-8000-000000000000",
+      "name": "Extract invoice",
+      "type": "n8n-nodes-parsewise.parsewise",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "document",
+        "operation": "extract",
+        "binaryProperties": "attachment_0",
+        "documentUrls": "",
+        "schema": "{\"type\":\"object\",\"properties\":{\"invoice_number\":{\"type\":\"string\"},\"total_due\":{\"type\":\"string\"},\"due_date\":{\"type\":\"string\"}}}",
+        "autoMap": true,
+        "projectName": "={{ $json.subject }}"
+      },
+      "credentials": {
+        "parsewiseApi": {
+          "id": "",
+          "name": "Parsewise account"
+        }
+      },
+      "position": [
+        940,
+        180
+      ]
+    },
+    {
+      "id": "n006-0000-4000-8000-000000000000",
+      "name": "Wait 1 minute",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "position": [
+        1300,
+        180
+      ]
+    },
+    {
+      "id": "n007-0000-4000-8000-000000000000",
+      "name": "Check status",
+      "type": "n8n-nodes-parsewise.parsewise",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "project",
+        "operation": "getStatus",
+        "projectId": "={{ $('Extract invoice').item.json.project_id }}"
+      },
+      "credentials": {
+        "parsewiseApi": {
+          "id": "",
+          "name": "Parsewise account"
+        }
+      },
+      "position": [
+        1560,
+        180
+      ]
+    },
+    {
+      "id": "n008-0000-4000-8000-000000000000",
+      "name": "Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1",
+              "leftValue": "={{ $json.schema_status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d2",
+              "leftValue": "={{ $json.pipeline_running }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "position": [
+        1820,
+        180
+      ]
+    },
+    {
+      "id": "n010-0000-4000-8000-000000000000",
+      "name": "Read results",
+      "type": "n8n-nodes-parsewise.parsewise",
+      "typeVersion": 1,
+      "parameters": {
+        "resource": "result",
+        "operation": "listResults",
+        "projectId": "={{ $('Extract invoice').item.json.project_id }}",
+        "page": 1,
+        "pageSize": 100
+      },
+      "credentials": {
+        "parsewiseApi": {
+          "id": "",
+          "name": "Parsewise account"
+        }
+      },
+      "position": [
+        2180,
+        180
+      ]
+    },
+    {
+      "id": "n011-0000-4000-8000-000000000000",
+      "name": "Map fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "received_at",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "id": "f2",
+              "name": "from",
+              "type": "string",
+              "value": "={{ $('New invoice email').item.json.from?.value?.[0]?.address ?? '' }}"
+            },
+            {
+              "id": "f3",
+              "name": "invoice_number",
+              "type": "string",
+              "value": "={{ ($('Read results').item.json.results || []).find(r => r.agent_name === 'Invoice Number')?.resolution_result?.value ?? '' }}"
+            },
+            {
+              "id": "f4",
+              "name": "total_due",
+              "type": "string",
+              "value": "={{ ($('Read results').item.json.results || []).find(r => r.agent_name === 'Total Due')?.resolution_result?.value ?? '' }}"
+            },
+            {
+              "id": "f5",
+              "name": "due_date",
+              "type": "string",
+              "value": "={{ ($('Read results').item.json.results || []).find(r => r.agent_name === 'Due Date')?.resolution_result?.value ?? '' }}"
+            },
+            {
+              "id": "f6",
+              "name": "project_id",
+              "type": "string",
+              "value": "={{ $('Extract invoice').item.json.project_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "position": [
+        2440,
+        180
+      ]
+    },
+    {
+      "id": "n012-0000-4000-8000-000000000000",
+      "name": "Add to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Invoices"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "position": [
+        2700,
+        180
+      ]
+    },
+    {
+      "id": "n013-0000-4000-8000-000000000000",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#invoices"
+        },
+        "text": "=:receipt: Invoice {{ $('Map fields').item.json.invoice_number }} for {{ $('Map fields').item.json.total_due }}, due {{ $('Map fields').item.json.due_date }} (from {{ $('Map fields').item.json.from }})",
+        "otherOptions": {}
+      },
+      "credentials": {
+        "slackApi": {
+          "id": "",
+          "name": "Slack account"
+        }
+      },
+      "position": [
+        2960,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "New invoice email": {
+      "main": [
+        [
+          {
+            "node": "Extract invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract invoice": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 minute": {
+      "main": [
+        [
+          {
+            "node": "Check status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check status": {
+      "main": [
+        [
+          {
+            "node": "Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Done?": {
+      "main": [
+        [
+          {
+            "node": "Read results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 1 minute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read results": {
+      "main": [
+        [
+          {
+            "node": "Map fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map fields": {
+      "main": [
+        [
+          {
+            "node": "Add to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to sheet": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

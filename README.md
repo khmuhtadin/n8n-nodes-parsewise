@@ -20,3 +20,7 @@ Khairul Muhtadin, n8n Ambassador (https://www.linkedin.com/in/khmuhtadin).
 
 - Extract is asynchronous: it returns `project_id`. Poll the project status operation until `pipeline_running` is `false` and `schema_status` is `success`, then list or get results.
 - With auto-map on, uploading several near-identical documents in one call can make Parsewise create duplicate agent names and fail the schema mapping (`schema_status: failed`). Extract one document per project when in doubt.
+
+## Workflow template
+
+[`examples/template-parsewise-invoice-extraction.json`](examples/template-parsewise-invoice-extraction.json): **Extract invoice fields from Gmail with Parsewise, Google Sheets and Slack**. Import it in n8n (Workflows > Import from file). Setup steps are in the yellow sticky note.

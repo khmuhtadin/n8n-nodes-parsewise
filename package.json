@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-parsewise",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Parsewise document extraction for n8n",
   "license": "MIT",
   "homepage": "https://github.com/khmuhtadin/n8n-nodes-parsewise#readme",
