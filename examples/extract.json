@@ -1,0 +1,1 @@
+{"name":"Parsewise extract","nodes":[{"parameters":{"resource":"document","operation":"extract","binaryProperties":"data","schema":"{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}}}","autoMap":true,"projectName":"Example"},"type":"n8n-nodes-parsewise.parsewise","typeVersion":1,"position":[0,0],"id":"parsewise","name":"Parsewise"}],"connections":{}}
