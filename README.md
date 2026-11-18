@@ -15,3 +15,8 @@ Webhook delivery uses custom shared headers according to the docs. No trigger is
 ## About the author
 
 Khairul Muhtadin, n8n Ambassador (https://www.linkedin.com/in/khmuhtadin).
+
+## Notes from live testing
+
+- Extract is asynchronous: it returns `project_id`. Poll the project status operation until `pipeline_running` is `false` and `schema_status` is `success`, then list or get results.
+- With auto-map on, uploading several near-identical documents in one call can make Parsewise create duplicate agent names and fail the schema mapping (`schema_status: failed`). Extract one document per project when in doubt.
